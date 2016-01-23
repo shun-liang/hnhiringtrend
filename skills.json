@@ -1,13 +1,15 @@
 {
-  "languages": [
-    ".NET",
+  "single_word_languages": [
     "ActionScript",
+    "Bash",
+    "C",
     "C",
     "C#",
     "C++",
     "CoffeeScript",
     "Clojure",
     "CUDA",
+    "D",
     "Dart",
     "Delphi",
     "Elixir",
@@ -35,6 +37,10 @@
     "Ruby",
     "Rust",
     "Scala",
-    "Scheme"
+    "Swift"
+  ],
+  "multiple_word_languages": [
+    "Assembly Language",
+    "Visual Basic"
   ]
 }

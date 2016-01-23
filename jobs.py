@@ -1,8 +1,9 @@
 from bs4 import BeautifulSoup
-import html
 import json
 import re
 import requests
+
+from threading import Thread
 
 with open('skills.json') as skills_file:
     skills_json = json.load(skills_file)
@@ -25,23 +26,13 @@ root_post_request = requests.get('https://hacker-news.firebaseio.com/v0/item/108
 job_post_ids = root_post_request.json()['kids']
 
 def scrape_jobs():
+    threads = []
     for job_post_id in job_post_ids:
-        job_post_text = _get_job_post_text(job_post_id)
-        if job_post_text:
-            job_post_text = BeautifulSoup(job_post_text, 'html.parser').get_text(separator = ' ').lower()
-            job_post_text = re.sub('%s|%s' % (url_pattern, email_pattern), '', job_post_text)
-            words = re.findall(split_pattern, job_post_text)
-            single_word_programming_languages_set = set({})
-            multiple_word_programming_languages_set = set({})
-            for word in words:
-                if word in single_word_programming_languages_lower:
-                    single_word_programming_languages_set.add(word)
-            for lang in multiple_word_programming_languages_lower:
-                if lang in job_post_text:
-                    multiple_word_programming_languages_set.add(lang)
-            for lang in single_word_programming_languages_set |\
-                multiple_word_programming_languages_set:
-                programming_languages_dict[lang].append(job_post_id)
+        thread = Thread(target=_fetch_and_analyze, args=[job_post_id])
+        thread.start()
+        threads.append(thread)
+    for thread in threads:
+        thread.join()
 
     print(programming_languages_dict)
     print({lang: len(programming_languages_dict[lang]) for lang in programming_languages_dict})
@@ -62,6 +53,24 @@ def _get_job_post_text(job_post_id):
     else:
         print('Can\t retrive job post %s, HTTP response code: %s' % (job_post_id, job_post_request_status_code))
         return None
+
+def _fetch_and_analyze(job_post_id):
+    job_post_text = _get_job_post_text(job_post_id)
+    if job_post_text:
+        job_post_text = BeautifulSoup(job_post_text, 'html.parser').get_text(separator = ' ').lower()
+        job_post_text = re.sub('%s|%s' % (url_pattern, email_pattern), '', job_post_text)
+        words = re.findall(split_pattern, job_post_text)
+        single_word_programming_languages_set = set({})
+        multiple_word_programming_languages_set = set({})
+        for word in words:
+            if word in single_word_programming_languages_lower:
+                single_word_programming_languages_set.add(word)
+        for lang in multiple_word_programming_languages_lower:
+            if lang in job_post_text:
+                multiple_word_programming_languages_set.add(lang)
+        for lang in single_word_programming_languages_set |\
+            multiple_word_programming_languages_set:
+            programming_languages_dict[lang].append(job_post_id)
 
 if __name__ == '__main__':
     scrape_jobs()

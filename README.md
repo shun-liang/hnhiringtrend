@@ -1,4 +1,6 @@
 # Digging Trends of "Ask HN: Who is Hiring?"
 
 ## To do
-Multi-threading for HN API call request.
+* Work with all HN hiring posts
+* Location information
+* Other technology keywords (such as OS and framework)

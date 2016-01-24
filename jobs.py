@@ -3,11 +3,10 @@ import json
 import re
 import requests
 
-#from threading import Thread
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
-THREAD_POOL_SIZE = 10
+THREAD_POOL_SIZE = 15
 
 with open('skills.json') as skills_file:
     skills_json = json.load(skills_file)
@@ -22,8 +21,8 @@ with open('skills.json') as skills_file:
             multiple_word_programming_languages_lower}
 print(programming_languages_dict)
 
-with open('posts.json') as posts_file:
-    posts_json = json.load(posts_file)
+#with open('posts.json') as posts_file:
+#    posts_json = json.load(posts_file)
 
 split_pattern = r'[\w\'\|\-\+#&]+'
 url_pattern = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
@@ -32,18 +31,30 @@ email_pattern = '[\w.-]+@[\w.-]+'
 def scrape_jobs(root_post_id):
     root_post_request = requests.get('https://hacker-news.firebaseio.com/v0/item/%s.json' %
             str(root_post_id))
-    print(root_post_request.url)
-    job_post_ids = root_post_request.json()['kids']
-    futures = []
-    executor = ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE)
-    for job_post_id in job_post_ids:
-        task_future = executor.submit(_fetch_and_analyze, job_post_id)
-        futures.append(task_future)
-    for task_future in futures:
-        task_future.result() 
+    root_post_json = root_post_request.json()
+    if 'title' in root_post_json:
+        root_post_title = root_post_json['title']
+        if "Ask HN: Who is hiring?" in root_post_title:
+            print ('%s: %s' % (root_post_title, root_post_request.url))
+            job_post_ids = root_post_json['kids']
+            futures = []
+            executor = ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE)
+            for job_post_id in job_post_ids:
+                task_future = executor.submit(_fetch_and_analyze, job_post_id)
+                futures.append(task_future)
+            for task_future in futures:
+                task_future.result() 
+    else:
+        print('Can\'t get attribute \'title\' from root post %s' % root_post_request.url)
 
 def show_jobs(job_post_id_list):
     print(job_post_json['text'])
+
+def _get_all_whoishring_root_posts():
+    user_request = requests.get('https://hacker-news.firebaseio.com/v0/user/whoishiring.json')
+    if user_request.status_code == 200:
+        root_posts = user_request.json()['submitted']
+        return root_posts
 
 def _get_job_post_text(job_post_id):
     job_post_request = requests.get('https://hacker-news.firebaseio.com/v0/item/%s.json' %
@@ -57,11 +68,12 @@ def _get_job_post_text(job_post_id):
                 #print(job_post_request.text)
                 return None
         else:
-            print('{Can\'t get json of job post %s}' % job_post_id)
+            print('Can\'t get json of job post %s, job_post_json is null' % job_post_id)
             #raise Exception('Can\'t get json of job post %s' % job_post_id)
             return None
     else:
-        print('Can\t retrive job post %s, HTTP response code: %s' % (job_post_id, job_post_request_status_code))
+        print('Can\'t retrive job post %s, HTTP response code: %s' %
+                (job_post_id, job_post_request.status_code))
         return None
 
 def _fetch_and_analyze(job_post_id):
@@ -83,9 +95,11 @@ def _fetch_and_analyze(job_post_id):
             programming_languages_dict[lang].append(job_post_id)
 
 if __name__ == '__main__':
-    for post_id in  posts_json.values():
-        scrape_jobs(post_id)
+    #for post_id in  posts_json.values():
+    #    scrape_jobs(post_id)
+    for root_post in _get_all_whoishring_root_posts():
+        scrape_jobs(root_post)
     ordered_programming_languages_dict = OrderedDict(sorted(programming_languages_dict.items(), key=lambda t: len(t[1])))
     print(ordered_programming_languages_dict)
-    print(OrderedDict({lang: len(ordered_programming_languages_dict[lang]) for lang in
-        ordered_programming_languages_dict}.items(), key=lambda t: t[1]))
+    print(OrderedDict(sorted({lang: len(ordered_programming_languages_dict[lang]) for lang in
+        ordered_programming_languages_dict}.items(), key=lambda t: t[1])))

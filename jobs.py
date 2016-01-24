@@ -3,7 +3,11 @@ import json
 import re
 import requests
 
-from threading import Thread
+#from threading import Thread
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
+
+THREAD_POOL_SIZE = 10
 
 with open('skills.json') as skills_file:
     skills_json = json.load(skills_file)
@@ -18,24 +22,25 @@ with open('skills.json') as skills_file:
             multiple_word_programming_languages_lower}
 print(programming_languages_dict)
 
+with open('posts.json') as posts_file:
+    posts_json = json.load(posts_file)
+
 split_pattern = r'[\w\'\|\-\+#&]+'
 url_pattern = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 email_pattern = '[\w.-]+@[\w.-]+'
 
-root_post_request = requests.get('https://hacker-news.firebaseio.com/v0/item/10822019.json')
-job_post_ids = root_post_request.json()['kids']
-
-def scrape_jobs():
-    threads = []
+def scrape_jobs(root_post_id):
+    root_post_request = requests.get('https://hacker-news.firebaseio.com/v0/item/%s.json' %
+            str(root_post_id))
+    print(root_post_request.url)
+    job_post_ids = root_post_request.json()['kids']
+    futures = []
+    executor = ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE)
     for job_post_id in job_post_ids:
-        thread = Thread(target=_fetch_and_analyze, args=[job_post_id])
-        thread.start()
-        threads.append(thread)
-    for thread in threads:
-        thread.join()
-
-    print(programming_languages_dict)
-    print({lang: len(programming_languages_dict[lang]) for lang in programming_languages_dict})
+        task_future = executor.submit(_fetch_and_analyze, job_post_id)
+        futures.append(task_future)
+    for task_future in futures:
+        task_future.result() 
 
 def show_jobs(job_post_id_list):
     print(job_post_json['text'])
@@ -45,10 +50,15 @@ def _get_job_post_text(job_post_id):
             job_post_id)
     if job_post_request.status_code == 200:
         job_post_json = job_post_request.json()
-        if 'text' in job_post_json:
-            return job_post_json['text']
+        if job_post_json:
+            if 'text' in job_post_json:
+                return job_post_json['text']
+            else:
+                #print(job_post_request.text)
+                return None
         else:
-            print(job_post_request.text)
+            print('{Can\'t get json of job post %s}' % job_post_id)
+            #raise Exception('Can\'t get json of job post %s' % job_post_id)
             return None
     else:
         print('Can\t retrive job post %s, HTTP response code: %s' % (job_post_id, job_post_request_status_code))
@@ -73,4 +83,9 @@ def _fetch_and_analyze(job_post_id):
             programming_languages_dict[lang].append(job_post_id)
 
 if __name__ == '__main__':
-    scrape_jobs()
+    for post_id in  posts_json.values():
+        scrape_jobs(post_id)
+    ordered_programming_languages_dict = OrderedDict(sorted(programming_languages_dict.items(), key=lambda t: len(t[1])))
+    print(ordered_programming_languages_dict)
+    print(OrderedDict({lang: len(ordered_programming_languages_dict[lang]) for lang in
+        ordered_programming_languages_dict}.items(), key=lambda t: t[1]))

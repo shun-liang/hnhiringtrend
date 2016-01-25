@@ -11,22 +11,22 @@ THREAD_POOL_SIZE = 15
 with open('skills.json') as skills_file:
     skills_json = json.load(skills_file)
     single_word_programming_languages = skills_json['single_word_languages']
-    single_word_programming_languages_lower = [lang.lower() for lang in
-            single_word_programming_languages]
+    #single_word_programming_languages_lower = [lang.lower() for lang in
+    #        single_word_programming_languages]
     multiple_word_programming_languages = skills_json['multiple_word_languages']
-    multiple_word_programming_languages_lower = [lang.lower() for lang in
-            multiple_word_programming_languages]
+    #multiple_word_programming_languages_lower = [lang.lower() for lang in
+    #        multiple_word_programming_languages]
 
 try:
     with open('language_matches.json') as language_matches_file:
         unix_time_to_programming_languages_dict = json.load(language_matches_file) 
-        print('dict keys: %s, len: %s' % (unix_time_to_programming_languages_dict.keys(),
-                len(unix_time_to_programming_languages_dict)))
+        #print('dict keys: %s, len: %s' % (unix_time_to_programming_languages_dict.keys(),
+        #        len(unix_time_to_programming_languages_dict)))
 except FileNotFoundError: 
     unix_time_to_programming_languages_dict = {}
 
 #unix_time_to_programming_languages_dict = {}
-print(unix_time_to_programming_languages_dict)
+#print(unix_time_to_programming_languages_dict)
 
 #with open('posts.json') as posts_file:
 #    posts_json = json.load(posts_file)
@@ -51,9 +51,9 @@ def scrape_jobs(root_post_id):
                 programming_languages_dict = unix_time_to_programming_languages_dict[unix_time]
             else:
                 programming_languages_dict = {lang: [] for lang in
-                        single_word_programming_languages_lower + multiple_word_programming_languages_lower}
+                        single_word_programming_languages + multiple_word_programming_languages}
                 unix_time_to_programming_languages_dict[unix_time] = programming_languages_dict
-            existing_posts = set([post for posts in programming_languages_dict.values() for post in posts])
+            existing_posts = frozenset([post for posts in programming_languages_dict.values() for post in posts])
             for job_post_id in job_post_ids:
                 if job_post_id not in existing_posts:
                     task_future = executor.submit(_fetch_and_analyze, job_post_id, programming_languages_dict)
@@ -66,7 +66,8 @@ def scrape_jobs(root_post_id):
         print('Can\'t get attribute \'title\' from root post %s' % root_post_request.url)
 
 def show_jobs(job_post_id_list):
-    print(job_post_json['text'])
+    for job_post_id in job_post_id_list:
+        print(_get_job_post_text(job_post_id))
 
 def main():
     for root_post in get_all_whoishring_root_posts():
@@ -83,6 +84,14 @@ def get_all_whoishring_root_posts():
     if user_request.status_code == 200:
         root_posts = user_request.json()['submitted']
         return root_posts
+
+def reduce_all_language_matches():
+    reduced_dict = {lang: [] for lang in single_word_programming_languages + multiple_word_programming_languages}
+    for unix_time in unix_time_to_programming_languages_dict:
+        language_dict = unix_time_to_programming_languages_dict[unix_time]
+        for lang in language_dict:
+            reduced_dict[lang] += language_dict[lang]
+    return reduced_dict
 
 def _get_job_post_text(job_post_id):
     job_post_request = requests.get('https://hacker-news.firebaseio.com/v0/item/%s.json' %
@@ -107,15 +116,15 @@ def _get_job_post_text(job_post_id):
 def _fetch_and_analyze(job_post_id, programming_languages_dict):
     job_post_text = _get_job_post_text(job_post_id)
     if job_post_text:
-        job_post_text = BeautifulSoup(job_post_text, 'html.parser').get_text(separator = ' ').lower()
+        job_post_text = BeautifulSoup(job_post_text, 'html.parser').get_text(separator = ' ')
         job_post_text = re.sub('%s|%s' % (url_pattern, email_pattern), '', job_post_text)
         words = re.findall(split_pattern, job_post_text)
         single_word_programming_languages_set = set({})
         multiple_word_programming_languages_set = set({})
         for word in words:
-            if word in single_word_programming_languages_lower:
+            if word in single_word_programming_languages:
                 single_word_programming_languages_set.add(word)
-        for lang in multiple_word_programming_languages_lower:
+        for lang in multiple_word_programming_languages:
             if lang in job_post_text:
                 multiple_word_programming_languages_set.add(lang)
         for lang in single_word_programming_languages_set |\
@@ -130,3 +139,5 @@ if __name__ == '__main__':
     #print(OrderedDict(sorted({lang: len(ordered_programming_languages_dict[lang]) for lang in
     #    ordered_programming_languages_dict}.items(), key=lambda t: t[1])))
     main()
+    reduced_dict = reduce_all_language_matches()
+    print(reduced_dict)

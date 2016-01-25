@@ -1,6 +1,7 @@
 # Digging Trends of "Ask HN: Who is Hiring?"
 
 ## To do
+* Use NLTK instead of regex to match words
 * Data visualization
 * Handle aliases of technologies (such as JS for JavaScript)
 * Index posts by time

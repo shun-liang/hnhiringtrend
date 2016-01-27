@@ -17,17 +17,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.13/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.15/vue.min.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
     <script src="./language_matches.min.jsonp"></script>
     <script src="./skills.jsonp"></script>
-    <script src="./plot.js"></script>
-
-    <script>
-      window.onload = function() {
-        var pl_line_chart = plot_module.get_pl_line_chart(language_matches, skills.languages);
-        console.log(language_matches);
-        console.log(pl_line_chart);
-      }
-    </script>
+    <script src="./github-colors.jsonp"></script>
+    <script src="scripts/plot.js"></script>
+    <script src="scripts/main.js"></script>
   </head>
   <body>
     <div class="container-fluid">
@@ -35,9 +32,9 @@
         <div class="col-md-1">
           side bar
         </div>
-        <div class="col-md-11">
-          <h1>Plot</h1>
-          <div id="chart"></div>
+        <div id="main-pane" class="col-md-11">
+          <h1>{{title}}</h1>
+          <div id="pl-line-chart"></div>
         </div>
       </div>
     </div>

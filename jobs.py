@@ -16,6 +16,7 @@ with open('skills.json') as skills_file:
     multiple_word_programming_languages = skills_json['multiple_word_languages']
     #multiple_word_programming_languages_lower = [lang.lower() for lang in
     #        multiple_word_programming_languages]
+    aliases = skills_json['aliases']
 
 try:
     with open('language_matches.json') as language_matches_file:
@@ -28,20 +29,27 @@ except FileNotFoundError:
 #unix_time_to_programming_languages_dict = {}
 #print(unix_time_to_programming_languages_dict)
 
-#with open('posts.json') as posts_file:
-#    posts_json = json.load(posts_file)
+with open('posts.json') as posts_file:
+    posts_json = json.load(posts_file)
+    job_post_pointers = posts_json['pointers'] 
+    non_job_posts = posts_json['non_job_post']
 
 split_pattern = r'[\w\'\|\-\+#&’]+'
 url_pattern = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 email_pattern = '[\w.-]+@[\w.-]+'
 
 def scrape_jobs(root_post_id):
+    if str(root_post_id) in job_post_pointers:
+        root_post_id = job_post_pointers[str(root_post_id)]
+    if root_post_id  in non_job_posts:
+        print('%s is not a job post' % root_post_id)
+        return None
     root_post_request = requests.get('https://hacker-news.firebaseio.com/v0/item/%s.json' %
             str(root_post_id))
     root_post_json = root_post_request.json()
     if 'title' in root_post_json:
         root_post_title = root_post_json['title']
-        if "Ask HN: Who is hiring?" in root_post_title:
+        if "hiring" in root_post_title.lower():
             print ('%s: %s' % (root_post_title, root_post_request.url))
             unix_time = str(root_post_json['time'])
             job_post_ids = root_post_json['kids']
@@ -72,10 +80,7 @@ def show_jobs(job_post_id_list):
 def main():
     for root_post in get_all_whoishring_root_posts():
         scrape_jobs(root_post)
-    #unix_time_to_programming_languages_json = json.dumps(unix_time_to_programming_languages_dict)
     #print(unix_time_to_programming_languages_dict)
-    #print(unix_time_to_programming_languages_json)
-    print(unix_time_to_programming_languages_dict)
     with open('language_matches.json', 'w') as language_matches_file:
         json.dump(unix_time_to_programming_languages_dict, language_matches_file, indent=2)
 
@@ -83,7 +88,11 @@ def get_all_whoishring_root_posts():
     user_request = requests.get('https://hacker-news.firebaseio.com/v0/user/whoishiring.json')
     if user_request.status_code == 200:
         root_posts = user_request.json()['submitted']
-        return root_posts
+    user_request = requests.get('https://hacker-news.firebaseio.com/v0/user/_whoishiring.json')
+    if user_request.status_code == 200:
+        root_posts += user_request.json()['submitted']
+    print('root_posts: %s' % root_posts)
+    return root_posts 
 
 def reduce_all_language_matches():
     reduced_dict = {lang: [] for lang in single_word_programming_languages + multiple_word_programming_languages}
@@ -124,6 +133,8 @@ def _fetch_and_analyze(job_post_id, programming_languages_dict):
         for word in words:
             if word in single_word_programming_languages:
                 single_word_programming_languages_set.add(word)
+            if word in aliases:
+                single_word_programming_languages_set.add(aliases[word])
         for lang in multiple_word_programming_languages:
             if lang in job_post_text:
                 multiple_word_programming_languages_set.add(lang)
@@ -139,5 +150,5 @@ if __name__ == '__main__':
     #print(OrderedDict(sorted({lang: len(ordered_programming_languages_dict[lang]) for lang in
     #    ordered_programming_languages_dict}.items(), key=lambda t: t[1])))
     main()
-    reduced_dict = reduce_all_language_matches()
-    print(reduced_dict)
+    #reduced_dict = reduce_all_language_matches()
+    #print(reduced_dict)

@@ -1,15 +1,13 @@
 var plot_module = function() {
-  var language_matches;
+  var languages_matches;
   var github_colors;
 
   var init_module = function(matches, colors) { 
-    language_matches = matches;
+    languages_matches = matches;
     github_colors = colors;
   }
 
   var get_pl_line_chart = function(langs) {
-    console.log(langs);
-    //console.log("Plotting..." + github_colors);
     var date_list = ['x'];
     var lang_counts = {};
     var columns = [];
@@ -21,13 +19,13 @@ var plot_module = function() {
       lang_counts[langs[index]] = [langs[index]];
     }
 
-    for(var key in language_matches) {
-      if(language_matches.hasOwnProperty(key)) {
+    for(var key in languages_matches) {
+      if(languages_matches.hasOwnProperty(key)) {
         post_date = new Date(key * 1000);
         date_list.push(post_date);
         for(index = 0; index < langs.length; index++) {
           var lang = langs[index];
-          lang_counts[lang].push(language_matches[key][lang].length);
+          lang_counts[lang].push(languages_matches[key][lang].length);
         }
       }
     }
@@ -38,6 +36,7 @@ var plot_module = function() {
       }
     }
     //console.log(columns);
+    console.log(date_list);
     return c3.generate({
       bindto: '#pl-line-chart',
       data: {

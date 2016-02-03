@@ -1,10 +1,12 @@
 var plot_module = function() {
   var languages_matches;
   var github_colors;
+  var total_posts;
 
-  var init_module = function(matches, colors) { 
-    languages_matches = matches;
-    github_colors = colors;
+  var init_module = function(_languages_matches, _github_colors, _total_posts) { 
+    languages_matches = _languages_matches;
+    github_colors = _github_colors;
+    total_posts = _total_posts;
   }
 
   var get_pl_line_chart = function(langs) {
@@ -35,6 +37,14 @@ var plot_module = function() {
         columns.push(lang_counts[lang]);
       }
     }
+    var total_posts_column = ['total job posts'];
+    for(var unix_time in total_posts) {
+      if(total_posts.hasOwnProperty(unix_time)) {
+        total_posts_column.push(total_posts[unix_time]);
+      }
+    }
+    console.log(total_posts_column);
+    columns.push(total_posts_column);
     //console.log(columns);
     console.log(date_list);
     return c3.generate({

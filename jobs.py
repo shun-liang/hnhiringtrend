@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -37,6 +38,10 @@ with open('posts.json') as posts_file:
     POSTS_JSON = json.load(posts_file)
     JOB_POST_POINTERS = POSTS_JSON['pointers']
     NON_JOB_POSTS = POSTS_JSON['non_job_post']
+
+with open('GeoLite2-City-Locations-en.csv') as cities_csv_file:
+    df = pd.read_csv(cities_csv_file)
+    cities = df['city_name']
 
 SPLIT_PATTERN = r'[\w\'\|\-\+#&’]+'
 URL_PATTERN = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
